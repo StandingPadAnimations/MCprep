@@ -52,6 +52,11 @@ class McprepMaterialProps():
 		itms.append(("seus", "SEUS", "Sets the pack format to SEUS."))
 		return itms
 
+	def blend_modes(self, context):
+		itms = [("HASHED", "Alpha Hash (default)", "Default in MCprep for familiarity reasons. This causes more noise in alpha transparent objects."),
+				("BLEND", "Alpha Blend", "Way less noise then Alpha Hash but no proper shadows")]
+		return itms
+
 	animateTextures = bpy.props.BoolProperty(
 		name="Animate textures (may be slow first time)",
 		description=(
@@ -73,7 +78,7 @@ class McprepMaterialProps():
 		description="Automatically improve relevant UI settings",
 		default=True)
 	optimizeScene = bpy.props.BoolProperty(
-		name="Optimize scene (cycles)",
+		name="Optimize Scene",
 		description="Optimize the scene for faster cycles rendering",
 		default=False)
 	usePrincipledShader = bpy.props.BoolProperty(
@@ -119,6 +124,12 @@ class McprepMaterialProps():
 		description="Change the pack format when using a PBR resource pack.",
 		items=pack_formats
 	)
+	blendMode = bpy.props.EnumProperty(
+		name="Blend Mode",
+		description="Choose between Alpha Hash or Alpha Blend",
+		items=blend_modes,
+		update=util.change_blend
+	)
 
 
 def draw_mats_common(self, context):
@@ -127,6 +138,7 @@ def draw_mats_common(self, context):
 	engine = context.scene.render.engine
 	if engine == 'CYCLES' or engine == 'BLENDER_EEVEE':
 		col.prop(self, "packFormat")
+		col.prop(self, "blendMode")
 		col.prop(self, "usePrincipledShader")
 	col.prop(self, "useReflections")
 	col.prop(self, "makeSolid")
@@ -147,8 +159,9 @@ def draw_mats_common(self, context):
 	col.prop(self, "improveUiSettings")
 	col = row.column()
 	col.prop(self, "combineMaterials")
-	row = self.layout.row()
-	row.prop(self, "optimizeScene")
+	if engine == 'CYCLES':
+		row = self.layout.row()
+		row.prop(self, "optimizeScene")
 
 
 class MCPREP_OT_prep_materials(bpy.types.Operator, McprepMaterialProps):

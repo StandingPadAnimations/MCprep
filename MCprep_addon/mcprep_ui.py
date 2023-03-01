@@ -414,6 +414,10 @@ class McprepPreference(bpy.types.AddonPreferences):
 			('experimental', 'Experimental', 'Enable experimental features')],
 		name="Feature set",
 		update=feature_set_update)
+	advanced_optimizer_settings = bpy.props.BoolProperty(
+		name="Advanced Optimizer settings",
+		description="Show advanced optimizer settings",
+		default=False)
 
 	# addon updater preferences
 
@@ -584,6 +588,8 @@ class McprepPreference(bpy.types.AddonPreferences):
 			row = layout.row()
 			row.prop(self, "verbose")
 			row.prop(self, "feature_set")
+			row = layout.row()
+			row.prop(self, "advanced_optimizer_settings")
 
 			if self.feature_set != "supported":
 				row = layout.row()
@@ -769,7 +775,12 @@ class MCPREP_PT_world_imports(bpy.types.Panel):
 			text="Cycles Optimizer", icon=icon)
 		if scn_props.show_settings_optimizer:
 			row = col.row(align=True)
+			addon_prefs = util.get_user_preferences(context)
 			optimize_scene.panel_draw(context, row)
+			# Only show advanced optimizer settings if the user wants them
+			if addon_prefs.advanced_optimizer_settings:
+				row = col.row(align=True)
+				optimize_scene.advanced_panel_draw(context, row)
 
 		# Advanced settings.
 		row = col.row(align=True)

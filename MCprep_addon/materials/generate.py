@@ -1424,9 +1424,12 @@ def matgen_cycles_simple(
 		links.new(nodeTexDiff.outputs[1], principled.inputs["Alpha"])
 		if hasattr(mat, "blend_method"):  # 2.8 eevee settings
 			if hasattr(mat, "blend_method"):
-				mat.blend_method = 'HASHED'
+				mat.blend_method = util.BLEND_MODE
 			if hasattr(mat, "shadow_method"):
-				mat.shadow_method = 'HASHED'
+				mat.shadow_method = util.SHADOW_MODE
+			
+			# This prevents transparency issues with Alpha Blend
+			mat.show_transparent_back = False
 
 	if use_emission:
 		inputs = [inp.name for inp in principled.inputs]
@@ -1510,6 +1513,10 @@ def matgen_cycles_principled(
 	nodeOut = create_node(
 		nodes, "ShaderNodeOutputMaterial", location=(820, 0))
 
+	# ! Optimizer Names: These help the optimizer optimize and remove nodes if they aren't needed
+	nodeMixEmit.name = "MCPREP_EMIT_MIX_NODE"
+	nodeMixCam.name = "MCPREP_LIGHT_PATH_MIX_NODE"
+	
 	# Sets default transparency value
 	nodeMixTrans.inputs[0].default_value = 1
 	nodeFalloff.inputs["Strength"].default_value = 32
@@ -1582,15 +1589,18 @@ def matgen_cycles_principled(
 			# Note: placed with hasattr to reduce bugs, seemingly only on old
 			# 2.80 build
 			if hasattr(mat, "blend_method"):
-				mat.blend_method = 'HASHED'
+				mat.blend_method = util.BLEND_MODE
 			if hasattr(mat, "shadow_method"):
-				mat.shadow_method = 'HASHED'
+				mat.shadow_method = util.SHADOW_MODE
 
 			# best if there is no partial transparency
 			# material.blend_method = 'CLIP' for no partial transparency
 			# both work fine with depth of field.
 
 			# but, BLEND does NOT work well with Depth of Field or layering
+
+			# This prevents transparency issues with Alpha Blend
+			mat.show_transparent_back = False
 
 	if use_emission:
 		nodeMixEmit.inputs[0].default_value = 1
@@ -1813,15 +1823,18 @@ def matgen_cycles_original(
 			# Note: placed with hasattr to reduce bugs, seemingly only on old
 			# 2.80 build
 			if hasattr(mat, "blend_method"):
-				mat.blend_method = 'HASHED'
+				mat.blend_method = util.BLEND_MODE
 			if hasattr(mat, "shadow_method"):
-				mat.shadow_method = 'HASHED'
+				mat.shadow_method = util.SHADOW_MODE
 
 			# best if there is no partial transparency
 			# material.blend_method = 'CLIP' for no partial transparency
 			# both work fine with depth of field.
 
 			# but, BLEND does NOT work well with Depth of Field or layering
+
+			# This prevents transparency issues with Alpha Blend
+			mat.show_transparent_back = False
 
 	if use_emission:
 		nodeMixEmit.inputs[0].default_value = 1
@@ -1952,15 +1965,18 @@ def matgen_special_water(mat, passes):
 		# Note: placed with hasattr to reduce bugs, seemingly only on old
 		# 2.80 build
 		if hasattr(mat, "blend_method"):
-			mat.blend_method = 'HASHED'
+			mat.blend_method = util.BLEND_MODE
 		if hasattr(mat, "shadow_method"):
-			mat.shadow_method = 'HASHED'
+			mat.shadow_method = util.SHADOW_MODE
 
 		# best if there is no partial transparency
 		# material.blend_method = 'CLIP' for no partial transparency
 		# both work fine with depth of field.
 
 		# but, BLEND does NOT work well with Depth of Field or layering
+
+		# This prevents transparency issues with Alpha Blend
+		mat.show_transparent_back = False
 
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
@@ -2086,9 +2102,9 @@ def matgen_special_glass(mat, passes):
 		# Note: placed with hasattr to reduce bugs, seemingly only on old
 		# 2.80 build
 		if hasattr(mat, "blend_method"):
-			mat.blend_method = 'HASHED'
+			mat.blend_method = util.BLEND_MODE
 		if hasattr(mat, "shadow_method"):
-			mat.shadow_method = 'HASHED'
+			mat.shadow_method = util.SHADOW_MODE
 
 		# best if there is no partial transparency
 		# material.blend_method = 'CLIP' for no partial transparency
@@ -2096,6 +2112,9 @@ def matgen_special_glass(mat, passes):
 
 		# but, BLEND does NOT work well with Depth of Field or layering
 
+		# This prevents transparency issues with Alpha Blend
+		mat.show_transparent_back = False
+		
 	# reapply animation data if any to generated nodes
 	apply_texture_animation_pass_settings(mat, animated_data)
 

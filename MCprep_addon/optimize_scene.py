@@ -26,58 +26,77 @@ from .materials import generate
 MAX_BOUNCES = 8 # 8 is generally the standard for light bounces
 MIN_BOUNCES = 2 # 2 is the lowest as it avoids issues regarding glossy
 CMP_BOUNCES = MIN_BOUNCES * 2 # To avoid bounces from going bellow 2
-MAX_FILTER_glossy = 1.0 # Standard in Blender
+MAX_FILTER_GLOSSY = 1.0 # Standard in Blender
 MAX_STEPS = 200 # 200 is fine for most scenes
 MIN_SCRAMBLING_MULTIPLIER = 0.35 # 0.35 seems to help performance a lot, but we'll do edits to this value depending on materials
-SCRAMBLING_MULTIPLIER_ADD = 0.05 # This is how much we'll add to the srambling distance multiplier 
 CMP_SCRAMBLING_MULTIPLIER = MIN_SCRAMBLING_MULTIPLIER * 3 # The max since beyond this performance doesn't improve as much
-VOLUMETRIC_NODES = ["ShaderNodeVolumeScatter", "ShaderNodeVolumeAbsorption", "ShaderNodeVolumePrincipled"]
+VOLUMETRIC_NODES = (bpy.types.ShaderNodeVolumeScatter, bpy.types.ShaderNodeVolumeAbsorption, bpy.types.ShaderNodeVolumePrincipled)
+EMISSION_NODES = (bpy.types.ShaderNodeLightFalloff, bpy.types.ShaderNodeEmission, bpy.types.ShaderNodeLightPath)
 
 # MCprep Node Settings
-MCPREP_HOMOGENOUS_volume = "MCPREP_HOMOGENOUS_VOLUME"
-MCPREP_NOT_HOMOGENOUS_volume = "MCPREP_NOT_HOMOGENOUS_VOLUME"
+MCPREP_HOMOGENOUS_VOLUME = "MCPREP_HOMOGENOUS_VOLUME"
+MCPREP_NOT_HOMOGENOUS_VOLUME = "MCPREP_NOT_HOMOGENOUS_VOLUME"
 
-
+SCRAMBLING_MULTIPLIER_ADD = 0.05 # This is how much we'll add to the srambling distance multiplier 
+GLOSSY_ADD = 1
+TRANSMISSIVE_ADD = 1
 class MCprepOptimizerProperties(bpy.types.PropertyGroup):
-	def scene_brightness(self, context):
-		itms = [
-			("BRIGHT", "Scene is bright", "Use this setting if your scene is mostly bright\nEx. outside during the day"), 
-			("DARK", "Scene is dark", "Use this setting if your scene is mostly dark\nEx. caves, interiors, and outside at night")
-		]
+	def set_caustics(self, context):
+		itms = []
+		if util.bv30():
+			itms.append(("NO_TOUCH", "Don't Touch", "Caustics settings will remain as they are currently set"))
+			itms.append(("TOUCH_BOTH", "Always Disable", "Always disables caustics"))
+		else:
+			itms.append(("TOUCH_BOTH", "Always Disable", "Always disables caustics"))
+			itms.append(("NO_TOUCH", "Don't Touch", "Caustics settings will remain as they are currently set"))
+
+		itms.append(("TOUCH_REFLECTIVE", "Always Disable Reflective Caustics", "Always disables reflective caustics"))
+		itms.append(("TOUCH_REFRACTIVE", "Always Disable Refractive Caustics", "Always disables Refractive caustics"))
 		return itms
 
-	caustics_bool = bpy.props.BoolProperty(
-		name="Caustics (slower)",
-		default=False,
-		description="If checked allows cautics to be enabled"
-	)
-	motion_blur_bool = bpy.props.BoolProperty(
-		name="Motion Blur (slower)",
-		default=False,
-		description="If checked allows motion blur to be enabled"
+	caustics_enum = bpy.props.EnumProperty(
+		name="",
+		description="Whether or not caustics are disabled when optimizing",
+		items=set_caustics
 	)
 	scene_brightness = bpy.props.EnumProperty(
 		name="",
 		description="Brightness of the scene: Affects how the optimizer adjusts sampling",
-		items=scene_brightness
+		items=[
+			("BRIGHT", "Scene is bright", "Use this setting if your scene is mostly bright\nEx. outside during the day"), 
+			("DARK", "Scene is dark", "Use this setting if your scene is mostly dark\nEx. caves, interiors, and outside at night")
+		]
 	)
 	quality_vs_speed = bpy.props.BoolProperty(
-		name="Optimize scene for quality: Makes the optimizer adjust settings in a less \"destructive\" way",
+		name="Optimize scene for quality",
+		description="Makes the optimizer adjust settings in a less \"destructive\" way",
 		default=True
 	)
 	simplify = bpy.props.BoolProperty(
-		name="Simplify the viewport: Reduces subdivisions to 0. Only disable if any assets will break when using this",
-		default=True
+		name="Simplify the viewport",
+		description="Reduces subdivisions to 0. Only disable if any assets will break when using this",
+		default=True,
 	)
 	scrambling_unsafe = bpy.props.BoolProperty(
-		name="Automatic Scrambling Distance: Can cause artifacts when rendering",
+		name="Automatic Scrambling Distance",
+		description="Reduces randomization of samples during rendering. This can lead to artifacts when rendering",
 		default=False
 	)
 	preview_scrambling = bpy.props.BoolProperty(
 		name="Preview Scrambling in the viewport",
+		description="Allows you to preview automatic scrambling distance in the viewport",
 		default=True
 	)
-
+	remove_emision_unsafe = bpy.props.BoolProperty(
+		name="Remove emission from materials",
+		description="Removes emission nodes so materials emit close to 0 light. This reduces noise but requires more work for the user when lighting and is not reversable.",
+		default=False
+	)
+	remove_useless_nodes_unsafe = bpy.props.BoolProperty(
+		name="Remove useless nodes",
+		description="Removes useless nodes from materials",
+		default=False
+	)
 
 def panel_draw(context, element):
 	box = element.box()
@@ -87,13 +106,14 @@ def panel_draw(context, element):
 	if engine == 'CYCLES':
 		col.label(text="Options")
 		quality_icon = "INDIRECT_ONLY_ON" if scn_props.quality_vs_speed else "INDIRECT_ONLY_OFF"
+		simplify_icon = "INDIRECT_ONLY_ON" if scn_props.simplify else "INDIRECT_ONLY_OFF"
 		col.prop(scn_props, "quality_vs_speed", icon=quality_icon)
-		col.prop(scn_props, "simplify", icon=quality_icon)
+		col.prop(scn_props, "simplify", icon=simplify_icon)
 
 		col.label(text="Time of Day")
 		col.prop(scn_props, "scene_brightness")
-		col.prop(scn_props, "caustics_bool", icon="TRIA_UP")
-		col.prop(scn_props, "motion_blur_bool", icon="TRIA_UP")
+		col.label(text="Caustics")
+		col.prop(scn_props, "caustics_enum")
 		col.row()
 		col.label(text="Unsafe Options! Use at your own risk!")
 		if util.bv30():
@@ -101,6 +121,116 @@ def panel_draw(context, element):
 			col.prop(scn_props, "scrambling_unsafe", icon=scrambling_unsafe_icon)
 			if scn_props.scrambling_unsafe:
 				col.prop(scn_props, "preview_scrambling")
+			col.prop(scn_props, "remove_emision_unsafe", icon="LIGHT")
+			col.prop(scn_props, "remove_useless_nodes_unsafe", icon="ORPHAN_DATA")
+		addon_prefs = util.get_user_preferences(context)
+		if not addon_prefs.advanced_optimizer_settings:
+			col.row()
+			col.label(text="")
+			subrow = col.row()
+			subrow.scale_y = 1.5
+			subrow.operator("mcprep.optimize_scene", text="Optimize Scene")
+	else:
+		col.label(text="Cycles Only :C")
+
+def update_max_bounces(self, context):
+    global MAX_BOUNCES
+    MAX_BOUNCES = self.max_bounces
+
+def update_min_bounces(self, context):
+    global MIN_BOUNCES
+    MIN_BOUNCES = self.min_bounces
+
+def update_max_filter_glossy(self, context):
+	global MAX_FILTER_GLOSSY
+	MAX_FILTER_GLOSSY = self.max_filter_glossy
+
+def update_max_steps(self, context):
+	global MAX_STEPS
+	MAX_STEPS = self.max_steps
+
+def update_min_scrambling_multiplier(self, context):
+	global MIN_SCRAMBLING_MULTIPLIER
+	MIN_SCRAMBLING_MULTIPLIER = self.min_scrambling_multiplier
+    
+def update_scrambling_multiplier(self, context):
+	global SCRAMBLING_MULTIPLIER_ADD
+	SCRAMBLING_MULTIPLIER_ADD = self.scrambling_multiplier_add
+
+def update_glossy_add(self, context):
+    global GLOSSY_ADD
+    GLOSSY_ADD = self.glossy_bounce_add
+
+def update_transmissive_add(self, context):
+	global TRANSMISSIVE_ADD
+	TRANSMISSIVE_ADD = self.transmissive_bounce_add
+
+class MCPrepOptimizerAdvancedProperties(bpy.types.PropertyGroup):
+	max_bounces = bpy.props.IntProperty(
+		name="Max Bounces",
+		description="The maximum number of light bounces for optimizations",
+		default=8,
+		update=update_max_bounces
+	)
+	min_bounces = bpy.props.IntProperty(
+		name="Min Bounces",
+		description="The minimum number of light bounces for optimizations",
+		default=2,
+		update=update_min_bounces
+	)
+	max_filter_glossy = bpy.props.FloatProperty(
+		name="Max Filter Glossy",
+		description="The maximum amount to set filter glossy to",
+		default=1.0,
+		update=update_max_filter_glossy
+	)
+	max_steps = bpy.props.IntProperty(
+		name="Max Steps",
+		description="The maximum number of volumetric steps",
+		default=200,
+		update=update_max_steps
+	)
+	min_scrambling_multiplier = bpy.props.FloatProperty(
+		name="Min Scrambling Multiplier",
+		description="The minimum amount to set scrambling multiplier to",
+		default=0.35,
+		update=update_min_scrambling_multiplier
+	)
+	scrambling_multiplier_add = bpy.props.FloatProperty(
+		name="Scrambling multiplier Add",
+		description="The amount to add to the scrambling multiplier when doing optimizations",
+		default=0.05,
+		update=update_scrambling_multiplier
+	)
+	glossy_bounce_add = bpy.props.IntProperty(
+		name="Glossy Bounce Add", 
+		description="The amount to add to glossy light bounces when doing optimizations",
+		default=1,
+		update=update_glossy_add
+    )
+	transmissive_bounce_add = bpy.props.IntProperty(
+		name="Transmissive Bounce Add",
+		description="The amount to add to transmissive light bounces when doing optimizations",
+		default=1,
+		update=update_transmissive_add
+	)
+
+def advanced_panel_draw(context, element):
+	box = element.box()
+	col = box.column()
+	engine = context.scene.render.engine
+	scn_props = context.scene.advanced_optimizer_props
+	if engine == 'CYCLES':
+		col.label(text="Advanced Options")
+		bounce_icon = "INDIRECT_ONLY_ON"
+		col.prop(scn_props, "max_bounces", icon=bounce_icon)
+		col.prop(scn_props, "min_bounces", icon=bounce_icon)
+		col.prop(scn_props, "max_filter_glossy")
+		col.prop(scn_props, "max_steps")
+		col.prop(scn_props, "min_scrambling_multiplier")
+		col.prop(scn_props, "scrambling_multiplier_add")
+		col.prop(scn_props, "glossy_bounce_add")
+		col.prop(scn_props, "transmissive_bounce_add")
 		col.row()
 		col.label(text="")
 		subrow = col.row()
@@ -108,7 +238,6 @@ def panel_draw(context, element):
 		subrow.operator("mcprep.optimize_scene", text="Optimize Scene")
 	else:
 		col.label(text="Cycles Only :C")
-
 
 class MCPrep_OT_optimize_scene(bpy.types.Operator):
 	bl_idname = "mcprep.optimize_scene"
@@ -137,8 +266,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		self.filter_glossy = 1
 		self.clamping_indirect = 1
 
-		# Motion blur, caustics, etc.
-		self.motion_blur = None
+		# Caustics
 		self.reflective_caustics = None
 		self.refractive_caustics = None
 
@@ -147,6 +275,8 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		self.uses_scrambling = None
 		self.preview_scrambling = None
 		self.scrambling_multiplier = MIN_SCRAMBLING_MULTIPLIER
+		self.remove_emision = False
+		self.remove_useless = False
 	
 	def is_vol(self, context, node):
 		density_socket = node.inputs["Density"] # Grab the density
@@ -154,12 +284,12 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		# Sometimes there may be something linked to the density but it's fine to treat it as a homogeneous volume
 		# This allows the user to control the addon at the node level
 		if not density_socket.is_linked:
-			if node_name == MCPREP_NOT_HOMOGENOUS_volume:
+			if node_name == MCPREP_HOMOGENOUS_VOLUME:
 				self.not_homogenous_volumes -= 1
 			else:
 				self.homogenous_volumes += 1
 		else:
-			if node_name == MCPREP_HOMOGENOUS_volume:
+			if node_name == MCPREP_HOMOGENOUS_VOLUME:
 				self.homogenous_volumes += 1
 			else:
 				self.not_homogenous_volumes += 1
@@ -169,8 +299,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			self.uses_scrambling = False
 			self.preview_scrambling = False
 			self.scrambling_multiplier = 1.0
-
-		print(self.homogenous_volumes, " ", self.not_homogenous_volumes)
+		
 
 	def is_pricipled(self, context, mat_type, node):
 		if mat_type == "reflective":
@@ -190,6 +319,7 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		prefs = util.get_preferences(context)
 		cprefs = prefs.addons.get("cycles")
 		scn_props = context.scene.optimizer_props
+		adv_scn_props = context.scene.advanced_optimizer_props
 
 		# Get the compute device type.
 		cycles_compute_device_type = None
@@ -201,7 +331,6 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		self.samples = bpy.context.scene.cycles.samples # We will be doing some minor adjustments to the sample count
 		self.minimum_samples = None
 		self.noise_threshold = 0.2
-
 
 		# Light Bounces.
 		self.diffuse = 2  # This is default because diffuse bounces don't need to be high
@@ -220,15 +349,16 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		self.clamping_indirect = 1
 
 		# Motion blur, caustics, etc.
-		self.motion_blur = scn_props.motion_blur_bool
-		self.reflective_caustics = scn_props.caustics_bool
-		self.refractive_caustics = scn_props.caustics_bool
+		self.reflective_caustics = False if scn_props.caustics_enum == "TOUCH_BOTH" or scn_props.caustics_enum == "TOUCH_REFLECTIVE" else bpy.context.scene.cycles.caustics_reflective
+		self.refractive_caustics = False if scn_props.caustics_enum == "TOUCH_BOTH" or scn_props.caustics_enum == "TOUCH_REFRACTIVE" else bpy.context.scene.cycles.caustics_refractive
 
 		# Optimizer Settings.
 		self.quality = scn_props.quality_vs_speed
 		self.uses_scrambling = scn_props.scrambling_unsafe
 		self.preview_scrambling = scn_props.preview_scrambling
 		self.scrambling_multiplier = MIN_SCRAMBLING_MULTIPLIER
+		self.remove_emision = scn_props.remove_emision_unsafe
+		self.remove_useless = scn_props.remove_useless_nodes_unsafe
 
 		# Time of day.
 		if scn_props.scene_brightness == "BRIGHT":
@@ -239,12 +369,12 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		
 		if self.quality:
 			self.minimum_samples = self.samples // 4
-			self.filter_glossy = MAX_FILTER_glossy // 2
+			self.filter_glossy = MAX_FILTER_GLOSSY // 2
 			self.max_steps = MAX_STEPS # TODO: Add better volumetric optimizations
 
 		else:
 			self.minimum_samples = self.samples // 8
-			self.filter_glossy = MAX_FILTER_glossy
+			self.filter_glossy = MAX_FILTER_GLOSSY
 			self.max_steps = MAX_STEPS // 2 # TODO: Add better volumetric optimizations
 
 		# Compute device.
@@ -294,30 +424,76 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 			except Exception:
 				bpy.context.scene.render.tile_x = 256
 				bpy.context.scene.render.tile_y = 256
-    
+	
 		# Cycles Render Settings Optimizations.
 		for mat in bpy.data.materials:
 			matGen = util.nameGeneralize(mat.name)
 			canon, form = generate.get_mc_canonical_name(matGen)
 			mat_type = None
 			if generate.checklist(canon, "reflective"):
-				self.glossy += 1
+				self.glossy += GLOSSY_ADD
 				mat_type = "reflective"
 			if generate.checklist(canon, "glass"):
-				self.transmissive += 1
+				self.transmissive += TRANSMISSIVE_ADD
 				mat_type = "glass"
+    
+			# Remove emission nodes from non-emissive materials or from materials that don't need it
+			if generate.checklist(canon, "block_mapping_jmc") and ((generate.checklist(canon, "emit") and self.remove_emision) or (not generate.checklist(canon, "emit") and self.remove_useless)):
+				if mat.use_nodes:
+					for mat_node in mat.node_tree.nodes:
+						if isinstance(mat_node, EMISSION_NODES):
+							mat.node_tree.nodes.remove(mat_node)
+
+					mix_path_node = mat.node_tree.nodes.get("MCPREP_LIGHT_PATH_MIX_NODE") 
+					mix_emit_node = mat.node_tree.nodes.get("MCPREP_EMIT_MIX_NODE") 
+
+					if mix_path_node:
+						mat.node_tree.nodes.remove(mix_path_node) # This is not needed anymore, lets remove it
+					if mix_emit_node:
+						mix_emit_node.inputs[0].default_value = 0 # TODO: Temporary fix for now. Preferably this node should be removed and its links should be fixed 
 
 			if mat.use_nodes:
 				nodes = mat.node_tree.nodes
 				for node in nodes:
-					print(node.bl_idname)
-					if node.bl_idname in VOLUMETRIC_NODES:
+					if isinstance(node, VOLUMETRIC_NODES):
 						self.is_vol(context, node)
 
-					# Not the best check, but better then nothing
-					if node.bl_idname == "ShaderNodeBsdfPrincipled":
+					if isinstance(node, bpy.types.ShaderNodeBsdfPrincipled): # Not the best check, but better then nothing
 						self.is_pricipled(context, mat_type, node)
+						continue
+					
+					# TODO: Give the "Add Color" node a proper name to reference in the optimizer
+					if (node.mute and node.label != "Add Color") and self.remove_useless: # Remove muted nodes
+						mat.node_tree.nodes.remove(node)
+						continue
 				
+				# Only do this second loop if the user wants to remove useless nodes
+				if self.remove_useless:
+					total_inputs = 0
+					unused_inputs = 0
+					total_outputs = 0
+					unused_outputs = 0
+
+					# Recurse through all nodes
+					for node in nodes:
+						# Recurse through all inputs
+						for input in node.inputs:
+							total_inputs += 1
+							if len(input.links) == 0:
+								unused_inputs += 1
+						# Recurse through all outputs
+						for output in node.outputs:
+							total_outputs += 1
+							if len(output.links) == 0:
+								unused_outputs += 1
+						
+						if unused_inputs == total_inputs and unused_outputs == total_outputs:
+							mat.node_tree.nodes.remove(node) # Remove the node if no inputs or outputs are being used
+						total_inputs = 0
+						total_outputs = 0
+						unused_inputs = 0
+						unused_outputs = 0
+
 				if self.homogenous_volumes > 0 or self.not_homogenous_volumes > 0:
 					volumes_rate = self.homogenous_volumes - self.not_homogenous_volumes
 					if volumes_rate > 0:
@@ -388,12 +564,12 @@ class MCPrep_OT_optimize_scene(bpy.types.Operator):
 		# Sometimes people don't want to use simplify because it messes with rigs
 		bpy.context.scene.render.use_simplify = scn_props.simplify
 		bpy.context.scene.render.simplify_subdivision = 0
-		bpy.context.scene.render.use_motion_blur = self.motion_blur
 		return {'FINISHED'}
 
 
 classes = (
 	MCprepOptimizerProperties,
+	MCPrepOptimizerAdvancedProperties,
 	MCPrep_OT_optimize_scene
 )
 
@@ -402,12 +578,11 @@ def register():
 	for cls in classes:
 		util.make_annotations(cls)
 		bpy.utils.register_class(cls)
-
-	bpy.types.Scene.optimizer_props = bpy.props.PointerProperty(
-		type=MCprepOptimizerProperties)
-
+	bpy.types.Scene.optimizer_props = bpy.props.PointerProperty(type=MCprepOptimizerProperties)
+	bpy.types.Scene.advanced_optimizer_props = bpy.props.PointerProperty(type=MCPrepOptimizerAdvancedProperties)
 
 def unregister():
 	for cls in reversed(classes):
 		bpy.utils.unregister_class(cls)
 	del bpy.types.Scene.optimizer_props
+	del bpy.types.Scene.advanced_optimizer_props
