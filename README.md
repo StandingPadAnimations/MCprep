@@ -14,7 +14,7 @@ Features implemented in the MCprep Dev branch
 ### Intended for Upstream
 These are features that are currently only in Kaion but are planned to be merged upstream
 
-* Emission Option for Prep Materials ([Pull Request made upstream](https://github.com/TheDuckCow/MCprep/pull/364))
+* Emission Option for Prep Materials (Now merged upstream!)
 * Proper moon lamp with some fixes ([Pull Request made upstream](https://github.com/TheDuckCow/MCprep/pull/370))
 * Inspecting OBJ to determine compatibility with texture swap and animate textures ([Pull Request made upstreal](https://github.com/TheDuckCow/MCprep/pull/372))
 * Using the new C++ OBJ importer in Blender 3.1 and above, as well as adding support for non-standard colorspaces ([Pull Request made upstream](https://github.com/TheDuckCow/MCprep/pull/373))
