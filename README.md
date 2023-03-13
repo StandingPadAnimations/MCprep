@@ -23,6 +23,7 @@ Kaion exclusive features
 * Signed Releases: All releases are signed with GPG and come with a signature that verify that releases have not been modified on Github (the public key is `7F6A0E6FA332BAD0EC9E76B383C7F596A88BE583`)
 
 ### Features from Kaion Merged Upstream
+#### Added in MCprep 3.4.2
 * [Emission Option for Prep Materials](https://github.com/TheDuckCow/MCprep/pull/369)
 * [Inspecting OBJ to determine compatibility with texture swap and animate textures](https://github.com/TheDuckCow/MCprep/pull/372)
 * [Using the new C++ OBJ importer in Blender 3.5 and above](https://github.com/TheDuckCow/MCprep/pull/382)
