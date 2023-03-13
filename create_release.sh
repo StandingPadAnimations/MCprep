@@ -1,5 +1,5 @@
 # Get the latest stable release and unzip
-wget "https://github.com/TheDuckCow/MCprep/releases/download/3.4.1/MCprep_addon_v3.4.1.zip"
+wget "https://github.com/TheDuckCow/MCprep/releases/download/3.4.2/MCprep_addon_v3.4.2.zip"
 mkdir MCprep_stable_release
 unzip ./MCprep_addon_v*.zip -d MCprep_stable_release
 
