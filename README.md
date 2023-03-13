@@ -14,16 +14,19 @@ Features implemented in the MCprep Dev branch
 ### Intended for Upstream
 These are features that are currently only in Kaion but are planned to be merged upstream
 
-* Emission Option for Prep Materials (Now merged upstream!)
 * Proper moon lamp with some fixes ([Pull Request made upstream](https://github.com/TheDuckCow/MCprep/pull/370))
-* Inspecting OBJ to determine compatibility with texture swap and animate textures ([Pull Request made upstreal](https://github.com/TheDuckCow/MCprep/pull/372))
-* Using the new C++ OBJ importer in Blender 3.1 and above, as well as adding support for non-standard colorspaces ([Pull Request made upstream](https://github.com/TheDuckCow/MCprep/pull/373))
 
 ### Kaion Quirks
 Kaion exclusive features
 
 * SimplePrep: Reduce the MCprep UI down to a couple of panels for those that don't want the extra features of MCprep (Decided upstream to be too niche)
 * Signed Releases: All releases are signed with GPG and come with a signature that verify that releases have not been modified on Github (the public key is `7F6A0E6FA332BAD0EC9E76B383C7F596A88BE583`)
+
+### Features from Kaion Merged Upstream
+* [Emission Option for Prep Materials](https://github.com/TheDuckCow/MCprep/pull/369)
+* [Inspecting OBJ to determine compatibility with texture swap and animate textures](https://github.com/TheDuckCow/MCprep/pull/372)
+* [Using the new C++ OBJ importer in Blender 3.5 and above](https://github.com/TheDuckCow/MCprep/pull/382)
+* [MTL conversion for non-standard colorspaces](https://github.com/TheDuckCow/MCprep/pull/383)
 
 ## Why?
 For starters, MCprep doesn't recieve updates often. At most MCprep gets updated a couple of times a year. Each release has a massive amount of features, but also a lot of bugs. MCprep Kaion meanwhile will recieve at least one update every month, if not more. That means you'll get the latest and greatest in the world of MCprep, but it also benefits MCprep by allowing WIP features to go in the wild, where bugs can be discovered and fixed early. It's a win-win, less bugs when MCprep does recieve a new update and early access to new features for users.
