@@ -35,6 +35,10 @@ def update_mcprep_texturepack_path(self, context):
 	bpy.ops.mcprep.reload_models()
 	conf.material_sync_cache = None
 
+	# Forces particle plane emitter to now use the newly set resource pack
+	# the first time, but the value gets saved again after.
+	context.scene.mcprep_particle_plane_file = ''
+
 
 def get_mc_canonical_name(name):
 	"""Convert a material name to standard MC name.
@@ -73,6 +77,12 @@ def get_mc_canonical_name(name):
 		general_name = name[len("minecraft_block-"):]
 	else:
 		jmc_prefix = False
+
+	# Patch naming to avoid issues.
+	if general_name == "water":
+		# Improves connection with older exports, without getting
+		# mixed up with the new "water": "painting/water" texture.
+		general_name = "water_still"
 
 	if general_name in conf.json_data["blocks"]["block_mapping_mc"]:
 		canon = conf.json_data["blocks"]["block_mapping_mc"][general_name]
