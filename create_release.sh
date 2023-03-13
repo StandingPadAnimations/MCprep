@@ -15,7 +15,9 @@ cd ./MCprep_addon/MCprep_resources || exit
 rm clouds_moon_sun*
 wget "https://cdn.discordapp.com/attachments/741468426404495410/1084521702026903652/clouds_moon_sun.blend" 
 wget "https://cdn.discordapp.com/attachments/741468426404495410/1084521044657840139/clouds_moon_sun_eevee.blend"
+
 # Compile the code
+cd .. || exit
 sh ./compile.sh
 rm -rf ./MCprep_addon/MCprep_resources/**
 
