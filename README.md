@@ -9,7 +9,7 @@ We have three types of features, "Upstream Dev", Intended for Upstream", and "Ka
 ### Upstream Dev
 Features implemented in the MCprep Dev branch
 
-* Support for the Blender 3.4 MixRGB node
+* Nothing, as of the latest Kaion release
 
 ### Intended for Upstream
 These are features that are currently only in Kaion but are planned to be merged upstream
